@@ -184,7 +184,7 @@ For production, consider using MongoDB Atlas:
 ## Known Issues
 
 - Email sending requires Gmail-specific configuration
-- MongoDB connection string in `seed_script.js` has a typo (port 7017 instead of 27017)
+- MongoDB connection string in `seed_script.js` 
 - Charts may not display properly on very small screens
 
 ## Future Enhancements
