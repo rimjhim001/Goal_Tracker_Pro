@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:7017/goaltracker';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/goaltracker';
 mongoose.connect(MONGODB_URI)
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
