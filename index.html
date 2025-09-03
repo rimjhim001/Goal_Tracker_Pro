@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goal Tracker Pro - Full Stack</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #06b6d4;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
+        }
+
+        .goal-card {
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .goal-card.completed {
+            border-left-color: var(--success-color);
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .goal-card.in-progress {
+            border-left-color: var(--warning-color);
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        }
+
+        .streak-badge {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #0891b2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .progress-ring {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 8;
+        }
+
+        .progress-ring .bg {
+            stroke: #e5e7eb;
+        }
+
+        .progress-ring .progress {
+            stroke: var(--success-color);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin: 0 auto 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success-color);
+        }
+
+        .notification.error {
+            background: var(--danger-color);
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#" onclick="showHome()">
+                <i class="fas fa-target me-2"></i>Goal Tracker Pro
+            </a>
+            <div class="navbar-nav ms-auto" id="navLinks">
+                <a class="nav-link" href="#" onclick="showHome()">Home</a>
+                <a class="nav-link" href="#" onclick="showLogin()">Login</a>
+                <a class="nav-link" href="#" onclick="showRegister()">Register</a>
+            </div>
+            <div class="navbar-nav ms-auto hidden" id="userNav">
+                <span class="navbar-text me-3">Hello, <span id="userName"></span>!</span>
+                <a class="nav-link" href="#" onclick="showDashboard()">Dashboard</a>
+                <a class="nav-link" href="#" onclick="showAddGoal()">Add Goal</a>
+                <a class="nav-link" href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid px-0">
+        <!-- Home Page -->
+        <div id="homePage" class="page">
+            <div class="hero-section">
+                <div class="container">
+                    <h1 class="display-4 fw-bold mb-4">
+                        <i class="fas fa-trophy me-3"></i>Achieve Your Goals
+                    </h1>
+                    <p class="lead mb-5">Set goals, track progress, analyze results - all in one platform.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-light btn-lg px-5" onclick="showRegister()">
+                            <i class="fas fa-rocket me-2"></i>Get Started
+                        </button>
+                        <button class="btn btn-outline-light btn-lg px-5" onclick="showLogin()">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container py-5">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <h4>Your Data, Secured</h4>
+                            <p class="text-muted">All your goals are safely stored and can be updated anytime you need.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <h4>Secure Login</h4>
+                            <p class="text-muted">Your account is protected with industry-standard security and encrypted passwords.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-server"></i>
+                            </div>
+                            <h4>Always Up-to-Date</h4>
+                            <p class="text-muted">Your goals sync instantly across all your devices with fast, reliable performance.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Page -->
+        <div id="loginPage" class="page hidden">
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body p-5">
+                                <div class="text-center mb-4">
+                                    <i class="fas fa-sign-in-alt fa-3x text-primary mb-3"></i>
+                                    <h2>Welcome Back</h2>
+                                    <p class="text-muted">Sign in to your secure account</p>
+                                </div>
+                                <form id="loginForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control form-control-lg" id="loginEmail" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label">Password</label>
+                                        <input type="password" class="form-control form-control-lg" id="loginPassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="loginBtn">
+                                        <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                                    </button>
+                                    <div class="text-center">
+                                        <span class="text-muted">Don't have an account? </span>
+                                        <a href="#" onclick="showRegister()" class="text-primary text-decoration-none">Register here</a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Page -->
+        <div id="registerPage" class="page hidden">
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body p-5">
+                                <div class="text-center mb-4">
+                                    <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                                    <h2>Create Account</h2>
+                                    <p class="text-muted">Join our secure platform</p>
+                                </div>
+                                <form id="registerForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Full Name</label>
+                                        <input type="text" class="form-control form-control-lg" id="registerName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control form-control-lg" id="registerEmail" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label">Password (min 6 characters)</label>
+                                        <input type="password" class="form-control form-control-lg" id="registerPassword" required minlength="6">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="registerBtn">
+                                        <i class="fas fa-rocket me-2"></i>Create Account
+                                    </button>
+                                    <div class="text-center">
+                                        <span class="text-muted">Already have an account? </span>
+                                        <a href="#" onclick="showLogin()" class="text-primary text-decoration-none">Login here</a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboardPage" class="page hidden">
+            <div class="container py-5">
+                <div class="row mb-4">
+                    <div class="col">
+                        <h2 class="mb-0">
+                            <i class="fas fa-tachometer-alt me-2"></i>My Goals
+                        </h2>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary" onclick="showAddGoal()">
+                            <i class="fas fa-plus me-2"></i>Add New Goal
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" onclick="loadDashboard()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row g-4 mb-5" id="statsCards">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="totalGoals">0</div>
+                            <div>Total Goals</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="completedGoals">0</div>
+                            <div>Completed</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="inProgressGoals">0</div>
+                            <div>In Progress</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="bestStreak">0</div>
+                            <div>Best Streak</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Goals List -->
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-list me-2"></i>Your Goals
+                                </h5>
+                               
+                            </div>
+                            <div class="card-body">
+                                <div id="goalsList" class="row g-3">
+                                    <div class="col-12 text-center py-4">
+                                        <div class="loading"></div>
+                                        <p class="mt-2 text-muted">Loading goals...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Goal Page -->
+        <div id="addGoalPage" class="page hidden">
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0">
+                                    <i class="fas fa-plus me-2"></i>Add New Goal
+                                </h4>
+                            </div>
+                            <div class="card-body p-5">
+                                <form id="addGoalForm">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Goal Title</label>
+                                        <input type="text" class="form-control form-control-lg" id="goalTitle" placeholder="e.g., Workout 4x this week" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Description</label>
+                                        <textarea class="form-control" id="goalDescription" rows="3" placeholder="Describe your goal in detail..."></textarea>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-4">
+                                            <label class="form-label fw-bold">Goal Type</label>
+                                            <select class="form-select form-select-lg" id="goalType" required>
+                                                <option value="">Select type</option>
+                                                <option value="weekly">Weekly Goal</option>
+                                                <option value="monthly">Monthly Goal</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-4">
+                                            <label class="form-label fw-bold">Target Days</label>
+                                            <input type="number" class="form-control form-control-lg" id="targetDays" min="1" placeholder="7" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">End Date</label>
+                                        <input type="date" class="form-control form-control-lg" id="goalEndDate" required>
+                                    </div>
+                                    <div class="d-flex gap-3">
+                                        <button type="submit" class="btn btn-primary btn-lg px-4" id="addGoalBtn">
+                                            <i class="fas fa-save me-2"></i>Create Goal
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-lg px-4" onclick="showDashboard()">
+                                            <i class="fas fa-times me-2"></i>Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goal Detail Page -->
+        <div id="goalDetailPage" class="page hidden">
+            <div class="container py-5">
+                <div class="row mb-4">
+                    <div class="col">
+                        <button class="btn btn-outline-primary mb-3" onclick="showDashboard()">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </button>
+                        <h2 id="goalDetailTitle"></h2>
+                        <p class="text-muted" id="goalDetailDescription"></p>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-chart-line me-2"></i>Progress Chart
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="progressChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>Goal Details
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4 text-center">
+                                    <div class="progress-ring">
+                                        <svg>
+                                            <circle class="bg" cx="40" cy="40" r="32"></circle>
+                                            <circle class="progress" cx="40" cy="40" r="32" id="progressCircle"></circle>
+                                        </svg>
+                                        <div class="position-absolute top-50 start-50 translate-middle">
+                                            <span class="fs-4 fw-bold" id="progressPercent">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span>Status:</span>
+                                    <span class="fw-bold" id="goalStatus">Loading...</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span>Current Streak:</span>
+                                    <span class="streak-badge" id="currentStreak">0 days</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span>Progress:</span>
+                                    <span id="progressDays">0/7 days</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-4">
+                                    <span>End Date:</span>
+                                    <span id="goalEndDateDisplay"></span>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success" id="markProgressBtn" onclick="markProgress()">
+                                        <i class="fas fa-check me-2"></i>Mark Today's Progress
+                                    </button>
+                                    <button class="btn btn-primary" id="completeGoalBtn" onclick="completeGoal()" style="display: none;">
+                                        <i class="fas fa-trophy me-2"></i>Complete Goal
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteGoal()">
+                                        <i class="fas fa-trash me-2"></i>Delete Goal
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+      
+        const API_BASE_URL = window.location.origin + '/api';
+        
+        // Application State
+        let currentUser = null;
+        let currentGoal = null;
+        let currentChart = null;
+        let authToken = localStorage.getItem('authToken');
+
+      
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
+            };
+
+          
+            if (authToken) {
+                config.headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            try {
+                const response = await fetch(url, config);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'API request failed');
+                }
+
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle me-2"></i>${message}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function calculateProgress(goal) {
+            return Math.min((goal.completedDays / goal.targetDays) * 100, 100);
+        }
+
+        function setLoading(buttonId, loading) {
+            const btn = document.getElementById(buttonId);
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = btn.innerHTML.replace(/^.*?(<i[^>]*><\/i>\s*)?/, '<div class="loading me-2"></div>');
+            } else {
+                btn.disabled = false;
+             
+            }
+        }
+
+        
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+            document.getElementById(pageId).classList.remove('hidden');
+            document.getElementById(pageId).classList.add('fade-in');
+        }
+
+        function showHome() {
+            showPage('homePage');
+        }
+
+        function showLogin() {
+            showPage('loginPage');
+        }
+
+        function showRegister() {
+            showPage('registerPage');
+        }
+
+        async function showDashboard() {
+            if (!authToken || !currentUser) {
+                showLogin();
+                return;
+            }
+            showPage('dashboardPage');
+            await loadDashboard();
+        }
+
+        function showAddGoal() {
+            if (!authToken || !currentUser) {
+                showLogin();
+                return;
+            }
+            showPage('addGoalPage');
+          
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            document.getElementById('goalEndDate').value = nextWeek.toISOString().split('T')[0];
+        }
+
+        async function showGoalDetail(goalId) {
+            try {
+                const response = await apiRequest(`/goals/${goalId}`);
+                currentGoal = response.goal;
+                showPage('goalDetailPage');
+                await loadGoalDetail();
+            } catch (error) {
+                showNotification('Error loading goal details: ' + error.message, 'error');
+            }
+        }
+
+        // Authentication Functions
+        async function login(email, password) {
+            try {
+                const response = await apiRequest('/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                authToken = response.token;
+                currentUser = response.user;
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                updateNavigation();
+                showDashboard();
+                showNotification(response.message || 'Login successful!');
+                
+                return true;
+            } catch (error) {
+                showNotification('Login failed: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        async function register(name, email, password) {
+            try {
+                const response = await apiRequest('/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                authToken = response.token;
+                currentUser = response.user;
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                updateNavigation();
+                showDashboard();
+                showNotification(response.message || 'Registration successful!');
+                
+                return true;
+            } catch (error) {
+                showNotification('Registration failed: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            updateNavigation();
+            showHome();
+            showNotification('Logged out successfully');
+        }
+
+        function updateNavigation() {
+            const navLinks = document.getElementById('navLinks');
+            const userNav = document.getElementById('userNav');
+            const userName = document.getElementById('userName');
+            
+            if (currentUser) {
+                navLinks.classList.add('hidden');
+                userNav.classList.remove('hidden');
+                userName.textContent = currentUser.name;
+            } else {
+                navLinks.classList.remove('hidden');
+                userNav.classList.add('hidden');
+            }
+        }
+
+        // Dashboard Functions
+        async function loadDashboard() {
+            try {
+              
+                const [statsResponse, goalsResponse] = await Promise.all([
+                    apiRequest('/stats'),
+                    apiRequest('/goals')
+                ]);
+
+                updateStats(statsResponse.stats);
+                renderGoalsList(goalsResponse.goals);
+            } catch (error) {
+                showNotification('Error loading dashboard: ' + error.message, 'error');
+            }
+        }
+
+        function updateStats(stats) {
+            document.getElementById('totalGoals').textContent = stats.totalGoals;
+            document.getElementById('completedGoals').textContent = stats.completedGoals;
+            document.getElementById('inProgressGoals').textContent = stats.inProgressGoals;
+            document.getElementById('bestStreak').textContent = stats.bestStreak;
+        }
+
+        function renderGoalsList(goals) {
+            const container = document.getElementById('goalsList');
+            container.innerHTML = '';
+
+            if (goals.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-target fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No goals yet</h4>
+                        <p class="text-muted">Create your first goal to get started!</p>
+                        <button class="btn btn-primary" onclick="showAddGoal()">
+                            <i class="fas fa-plus me-2"></i>Add Your First Goal
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            goals.forEach(goal => {
+                const progress = calculateProgress(goal);
+                const statusClass = goal.status === 'completed' ? 'completed' : 'in-progress';
+                const statusIcon = goal.status === 'completed' ? 'check-circle' : 'clock';
+                const statusText = goal.status === 'completed' ? 'Completed' : 'In Progress';
+
+                container.innerHTML += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card goal-card ${statusClass}" onclick="showGoalDetail('${goal._id}')">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h6 class="card-title mb-0">${goal.title}</h6>
+                                    <span class="badge bg-${goal.status === 'completed' ? 'success' : 'warning'}">
+                                        <i class="fas fa-${statusIcon} me-1"></i>${statusText}
+                                    </span>
+                                </div>
+                                <p class="card-text text-muted small">${goal.description || 'No description'}</p>
+                                <div class="progress mb-3" style="height: 8px;">
+                                    <div class="progress-bar bg-${goal.status === 'completed' ? 'success' : 'warning'}" 
+                                         style="width: ${progress}%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span>${goal.completedDays}/${goal.targetDays} days</span>
+                                    <span><i class="fas fa-fire me-1"></i>${goal.streak || 0} streak</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Goal Management Functions
+        async function addGoal(title, description, type, targetDays, endDate) {
+            try {
+                const response = await apiRequest('/goals', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        type,
+                        targetDays: parseInt(targetDays),
+                        endDate
+                    })
+                });
+
+                showNotification(response.message || 'Goal created successfully!');
+                showDashboard();
+            } catch (error) {
+                showNotification('Error creating goal: ' + error.message, 'error');
+            }
+        }
+
+        async function markProgress() {
+            if (!currentGoal) return;
+            
+            try {
+                const response = await apiRequest(`/goals/${currentGoal._id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ markProgress: true })
+                });
+
+                currentGoal = response.goal;
+                showNotification(response.message || 'Progress marked!');
+                await loadGoalDetail();
+            } catch (error) {
+                showNotification('Error marking progress: ' + error.message, 'error');
+            }
+        }
+
+        async function completeGoal() {
+            if (!currentGoal) return;
+            
+            try {
+                const response = await apiRequest(`/goals/${currentGoal._id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status: 'completed' })
+                });
+
+                currentGoal = response.goal;
+                showNotification('Goal completed! 🎉');
+                await loadGoalDetail();
+            } catch (error) {
+                showNotification('Error completing goal: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteGoal() {
+            if (!currentGoal) return;
+            
+            if (confirm('Are you sure you want to delete this goal? This action cannot be undone.')) {
+                try {
+                    await apiRequest(`/goals/${currentGoal._id}`, {
+                        method: 'DELETE'
+                    });
+
+                    showNotification('Goal deleted successfully');
+                    showDashboard();
+                } catch (error) {
+                    showNotification('Error deleting goal: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // Goal Detail Functions
+        async function loadGoalDetail() {
+            if (!currentGoal) return;
+            
+            document.getElementById('goalDetailTitle').textContent = currentGoal.title;
+            document.getElementById('goalDetailDescription').textContent = currentGoal.description || 'No description';
+            
+            const progress = calculateProgress(currentGoal);
+            document.getElementById('progressPercent').textContent = Math.round(progress) + '%';
+            document.getElementById('goalStatus').textContent = 
+                currentGoal.status === 'completed' ? 'Completed' : 'In Progress';
+            document.getElementById('currentStreak').textContent = (currentGoal.streak || 0) + ' days';
+            document.getElementById('progressDays').textContent = 
+                `${currentGoal.completedDays}/${currentGoal.targetDays} days`;
+            document.getElementById('goalEndDateDisplay').textContent = formatDate(currentGoal.endDate);
+            
+            // Update progress circle
+            const circle = document.getElementById('progressCircle');
+            const circumference = 2 * Math.PI * 32;
+            const offset = circumference - (progress / 100) * circumference;
+            circle.style.strokeDasharray = circumference;
+            circle.style.strokeDashoffset = offset;
+            
+            // Update buttons
+            const markBtn = document.getElementById('markProgressBtn');
+            const completeBtn = document.getElementById('completeGoalBtn');
+            
+            if (currentGoal.status === 'completed') {
+                markBtn.style.display = 'none';
+                completeBtn.style.display = 'none';
+            } else {
+                markBtn.style.display = 'block';
+                completeBtn.style.display = currentGoal.completedDays >= currentGoal.targetDays ? 'block' : 'none';
+            }
+            
+            await renderProgressChart();
+        }
+
+        async function renderProgressChart() {
+            try {
+                const response = await apiRequest(`/streak/${currentGoal._id}`);
+                
+                const ctx = document.getElementById('progressChart').getContext('2d');
+                
+                // Destroy existing chart if it exists
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+                
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: response.labels,
+                        datasets: [{
+                            label: 'Progress',
+                            data: response.data,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: currentGoal.targetDays,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            }
+                        },
+                        elements: {
+                            point: {
+                                hoverRadius: 8
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                showNotification('Error loading chart data: ' + error.message, 'error');
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            setLoading('loginBtn', true);
+            await login(email, password);
+            setLoading('loginBtn', false);
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            setLoading('registerBtn', true);
+            await register(name, email, password);
+            setLoading('registerBtn', false);
+        });
+
+        document.getElementById('addGoalForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('goalTitle').value;
+            const description = document.getElementById('goalDescription').value;
+            const type = document.getElementById('goalType').value;
+            const targetDays = document.getElementById('targetDays').value;
+            const endDate = document.getElementById('goalEndDate').value;
+            
+            setLoading('addGoalBtn', true);
+            await addGoal(title, description, type, targetDays, endDate);
+            setLoading('addGoalBtn', false);
+        });
+
+        document.getElementById('goalType').addEventListener('change', function() {
+            const targetDaysInput = document.getElementById('targetDays');
+            if (this.value === 'weekly') {
+                targetDaysInput.value = 7;
+            } else if (this.value === 'monthly') {
+                targetDaysInput.value = 30;
+            }
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for existing auth token
+            const savedToken = localStorage.getItem('authToken');
+            const savedUser = localStorage.getItem('currentUser');
+            
+            if (savedToken && savedUser) {
+                authToken = savedToken;
+                currentUser = JSON.parse(savedUser);
+                updateNavigation();
+                showDashboard();
+            } else {
+                showHome();
+            }
+        });
+    </script>
+</body>
+</html>
